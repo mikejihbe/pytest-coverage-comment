@@ -17,183 +17,200 @@ const FILE_STATUSES = Object.freeze({
 });
 
 const main = async () => {
-  const token = core.getInput('github-token', { required: true });
-  const title = core.getInput('title', { required: false });
-  const badgeTitle = core.getInput('badge-title', { required: false });
-  const hideBadge = core.getBooleanInput('hide-badge', { required: false });
-  const hideReport = core.getBooleanInput('hide-report', { required: false });
-  const createNewComment = core.getBooleanInput('create-new-comment', {
-    required: false,
-  });
-  const hideComment = core.getBooleanInput('hide-comment', { required: false });
-  const reportOnlyChangedFiles = core.getBooleanInput(
-    'report-only-changed-files',
-    { required: false }
-  );
-  const defaultBranch = core.getInput('default-branch', { required: false });
-  const covFile = core.getInput('pytest-coverage-path', { required: false });
-  const pathPrefix = core.getInput('coverage-path-prefix', { required: false });
-  const xmlFile = core.getInput('junitxml-path', { required: false });
-  const xmlTitle = core.getInput('junitxml-title', { required: false });
-  const multipleFiles = core.getMultilineInput('multiple-files', {
-    required: false,
-  });
-  const { context, repository } = github;
-  const { repo, owner } = context.repo;
-  const { eventName, payload } = context;
-  const WATERMARK = `<!-- Pytest Coverage Comment: ${context.job} -->\n`;
-  let finalHtml = '';
-
-  const options = {
-    token,
-    repository: repository || `${owner}/${repo}`,
-    prefix: `${process.env.GITHUB_WORKSPACE}/`,
-    pathPrefix,
-    covFile,
-    xmlFile,
-    title,
-    badgeTitle,
-    hideBadge,
-    hideReport,
-    createNewComment,
-    hideComment,
-    reportOnlyChangedFiles,
-    defaultBranch,
-    xmlTitle,
-    multipleFiles,
-  };
-
-  if (eventName === 'pull_request') {
-    options.commit = payload.pull_request.head.sha;
-    options.head = payload.pull_request.head.ref;
-    options.base = payload.pull_request.base.ref;
-  } else if (eventName === 'push') {
-    options.commit = payload.after;
-    options.head = context.ref;
-  }
-
-  if (options.reportOnlyChangedFiles) {
-    const changedFiles = await getChangedFiles(options);
-    options.changedFiles = changedFiles;
-  }
-
-  if (multipleFiles && multipleFiles.length) {
-    finalHtml += getMultipleReport(options);
-    core.setOutput('summaryReport', JSON.stringify(finalHtml));
-  } else {
-    let report = getCoverageReport(options);
-    const { coverage, color, html, warnings } = report;
-    const summaryReport = getSummaryReport(options);
-
-    if (html) {
-      const newOptions = { ...options, commit: defaultBranch };
-      const output = getCoverageReport(newOptions);
-      core.setOutput('coverageHtml', output.html);
-    }
-
-    // set to output junitxml values
-    if (summaryReport) {
-      const parsedXml = getParsedXml(options);
-      const { errors, failures, skipped, tests, time } = parsedXml;
-      const valuesToExport = { errors, failures, skipped, tests, time };
-
-      Object.entries(valuesToExport).forEach(([key, value]) => {
-        core.info(`${key}: ${value}`);
-        core.setOutput(key, value);
-      });
-
-      const notSuccessTestInfo = getNotSuccessTest(options);
-      core.setOutput('notSuccessTestInfo', JSON.stringify(notSuccessTestInfo));
-      core.setOutput('summaryReport', JSON.stringify(summaryReport));
-    }
-
-    if (html.length + summaryReport.length > MAX_COMMENT_LENGTH) {
-      // generate new html without report
-      core.warning(
-        `Your comment is too long (maximum is ${MAX_COMMENT_LENGTH} characters), coverage report will not be added.`
-      );
-      core.warning(
-        `Try add: "--cov-report=term-missing:skip-covered", or add "hide-report: true", or add "report-only-changed-files: true", or switch to "multiple-files" mode`
-      );
-      report = getSummaryReport({ ...options, hideReport: true });
-    }
-
-    finalHtml += html;
-    finalHtml += finalHtml.length ? `\n\n${summaryReport}` : summaryReport;
-
-    if (coverage) {
-      core.startGroup(options.covFile);
-      core.info(`coverage: ${coverage}`);
-      core.info(`color: ${color}`);
-      core.info(`warnings: ${warnings}`);
-
-      core.setOutput('coverage', coverage);
-      core.setOutput('color', color);
-      core.setOutput('warnings', warnings);
-      core.endGroup();
-    }
-  }
-
-  if (!finalHtml || options.hideComment) {
-    core.info('Nothing to report');
-    return;
-  }
-  const body = WATERMARK + finalHtml;
-  const octokit = github.getOctokit(token);
-
-  const issue_number = payload.pull_request ? payload.pull_request.number : 0;
-
-  if (eventName === 'push') {
-    core.info('Create commit comment');
-    await octokit.repos.createCommitComment({
-      repo,
-      owner,
-      commit_sha: options.commit,
-      body,
+  try {
+    const token = core.getInput('github-token', { required: true });
+    const title = core.getInput('title', { required: false });
+    const badgeTitle = core.getInput('badge-title', { required: false });
+    const hideBadge = core.getBooleanInput('hide-badge', { required: false });
+    const hideReport = core.getBooleanInput('hide-report', { required: false });
+    const createNewComment = core.getBooleanInput('create-new-comment', {
+      required: false,
     });
-  }
+    const hideComment = core.getBooleanInput('hide-comment', {
+      required: false,
+    });
+    const reportOnlyChangedFiles = core.getBooleanInput(
+      'report-only-changed-files',
+      { required: false }
+    );
+    const defaultBranch = core.getInput('default-branch', { required: false });
+    const covFile = core.getInput('pytest-coverage-path', { required: false });
+    const pathPrefix = core.getInput('coverage-path-prefix', {
+      required: false,
+    });
+    const xmlFile = core.getInput('junitxml-path', { required: false });
+    const xmlTitle = core.getInput('junitxml-title', { required: false });
+    const multipleFiles = core.getMultilineInput('multiple-files', {
+      required: false,
+    });
+    const { context, repository } = github;
+    const { repo, owner } = context.repo;
+    const { eventName, payload } = context;
+    const WATERMARK = `<!-- Pytest Coverage Comment: ${context.job} -->\n`;
+    let finalHtml = '';
 
-  if (eventName === 'pull_request') {
-    if (createNewComment) {
-      core.info('Creating a new comment');
+    const options = {
+      token,
+      repository: repository || `${owner}/${repo}`,
+      prefix: `${process.env.GITHUB_WORKSPACE}/`,
+      pathPrefix,
+      covFile,
+      xmlFile,
+      title,
+      badgeTitle,
+      hideBadge,
+      hideReport,
+      createNewComment,
+      hideComment,
+      reportOnlyChangedFiles,
+      defaultBranch,
+      xmlTitle,
+      multipleFiles,
+    };
 
-      await octokit.issues.createComment({
+    if (eventName === 'pull_request') {
+      options.commit = payload.pull_request.head.sha;
+      options.head = payload.pull_request.head.ref;
+      options.base = payload.pull_request.base.ref;
+    } else if (eventName === 'push') {
+      options.commit = payload.after;
+      options.head = context.ref;
+    }
+
+    if (options.reportOnlyChangedFiles) {
+      const changedFiles = await getChangedFiles(options);
+      options.changedFiles = changedFiles;
+    }
+
+    if (multipleFiles && multipleFiles.length) {
+      finalHtml += getMultipleReport(options);
+      core.setOutput('summaryReport', JSON.stringify(finalHtml));
+    } else {
+      let report = getCoverageReport(options);
+      const { coverage, color, html, warnings } = report;
+      const summaryReport = getSummaryReport(options);
+
+      if (html) {
+        core.info('RENDERING HTML');
+        const newOptions = { ...options, commit: defaultBranch };
+        const output = getCoverageReport(newOptions);
+        core.setOutput('coverageHtml', output.html);
+        core.info('RENDERED HTML');
+      }
+
+      // set to output junitxml values
+      if (summaryReport) {
+        core.info('RENDERING SUMMARY');
+        const parsedXml = getParsedXml(options);
+        const { errors, failures, skipped, tests, time } = parsedXml;
+        const valuesToExport = { errors, failures, skipped, tests, time };
+        core.info('RENDERING SUMMARY');
+        Object.entries(valuesToExport).forEach(([key, value]) => {
+          core.info(`${key}: ${value}`);
+          core.setOutput(key, value);
+        });
+        core.info('RENDERING SUMMARY');
+        const notSuccessTestInfo = getNotSuccessTest(options);
+        core.setOutput(
+          'notSuccessTestInfo',
+          JSON.stringify(notSuccessTestInfo)
+        );
+        core.setOutput('summaryReport', JSON.stringify(summaryReport));
+        core.info('RENDERED summary');
+      }
+
+      if (html.length + summaryReport.length > MAX_COMMENT_LENGTH) {
+        // generate new html without report
+        core.warning(
+          `Your comment is too long (maximum is ${MAX_COMMENT_LENGTH} characters), coverage report will not be added.`
+        );
+        core.warning(
+          `Try add: "--cov-report=term-missing:skip-covered", or add "hide-report: true", or add "report-only-changed-files: true", or switch to "multiple-files" mode`
+        );
+        report = getSummaryReport({ ...options, hideReport: true });
+      }
+
+      finalHtml += html;
+      finalHtml += finalHtml.length ? `\n\n${summaryReport}` : summaryReport;
+
+      if (coverage) {
+        core.startGroup(options.covFile);
+        core.info(`coverage: ${coverage}`);
+        core.info(`color: ${color}`);
+        core.info(`warnings: ${warnings}`);
+
+        core.setOutput('coverage', coverage);
+        core.setOutput('color', color);
+        core.setOutput('warnings', warnings);
+        core.endGroup();
+      }
+      core.info('COMPLETED RENDERING');
+    }
+
+    if (!finalHtml || options.hideComment) {
+      core.info('Nothing to report');
+      return;
+    }
+    const body = WATERMARK + finalHtml;
+    const octokit = github.getOctokit(token);
+
+    const issue_number = payload.pull_request ? payload.pull_request.number : 0;
+
+    if (eventName === 'push') {
+      core.info('Create commit comment');
+      await octokit.repos.createCommitComment({
         repo,
         owner,
-        issue_number,
+        commit_sha: options.commit,
         body,
       });
-    } else {
-      // Now decide if we should issue a new comment or edit an old one
-      const { data: comments } = await octokit.issues.listComments({
-        repo,
-        owner,
-        issue_number,
-      });
+    }
 
-      const comment = comments.find(
-        (c) =>
-          c.user.login === 'github-actions[bot]' && c.body.startsWith(WATERMARK)
-      );
+    if (eventName === 'pull_request') {
+      if (createNewComment) {
+        core.info('Creating a new comment');
 
-      if (comment) {
-        core.info('Founded previous commit, updating');
-        await octokit.issues.updateComment({
-          repo,
-          owner,
-          comment_id: comment.id,
-          body,
-        });
-      } else {
-        core.info('No previous commit founded, creating a new one');
         await octokit.issues.createComment({
           repo,
           owner,
           issue_number,
           body,
         });
+      } else {
+        // Now decide if we should issue a new comment or edit an old one
+        const { data: comments } = await octokit.issues.listComments({
+          repo,
+          owner,
+          issue_number,
+        });
+
+        const comment = comments.find(
+          (c) =>
+            c.user.login === 'github-actions[bot]' &&
+            c.body.startsWith(WATERMARK)
+        );
+
+        if (comment) {
+          core.info('Founded previous commit, updating');
+          await octokit.issues.updateComment({
+            repo,
+            owner,
+            comment_id: comment.id,
+            body,
+          });
+        } else {
+          core.info('No previous commit founded, creating a new one');
+          await octokit.issues.createComment({
+            repo,
+            owner,
+            issue_number,
+            body,
+          });
+        }
       }
     }
+  } catch (error) {
+    core.error(`Error in main. ${error.message} ${error.stack}`);
   }
 };
 
