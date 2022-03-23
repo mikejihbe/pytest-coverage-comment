@@ -43,7 +43,7 @@ const getCoverageReport = (options) => {
       return { html, coverage, color, warnings };
     }
   } catch (error) {
-    core.error(`Generating coverage report. ${error.message}`);
+    core.error(`Generating coverage report. ${error.message}. ${error.stack}`);
   }
 
   return { html: '', coverage: '0', color: 'red', warnings: 0 };
@@ -108,7 +108,6 @@ const getTotal = (data) => {
 
   const lines = data.split('\n');
   const line = lines.find((l) => l.includes('TOTAL     '));
-
   return parseTotalLine(line);
 };
 
@@ -167,8 +166,7 @@ const parseTotalLine = (line) => {
     return null;
   }
 
-  const parsedLine = line.split('   ').filter((l) => l);
-
+  const parsedLine = line.split(/\s+/).filter((l) => l);
   if (parsedLine.length < 4) {
     return null;
   }
