@@ -82,6 +82,8 @@ const main = async () => {
       options.changedFiles = changedFiles;
     }
 
+    core.info(`Options: ${JSON.stringify(options)}`);
+
     if (multipleFiles && multipleFiles.length) {
       finalHtml += getMultipleReport(options);
       core.setOutput('summaryReport', JSON.stringify(finalHtml));
@@ -94,6 +96,7 @@ const main = async () => {
         core.info('RENDERING HTML');
         const newOptions = { ...options, commit: defaultBranch };
         const output = getCoverageReport(newOptions);
+        core.info('RENDERING HTML...setOutput');
         core.setOutput('coverageHtml', output.html);
         core.info('RENDERED HTML');
       }

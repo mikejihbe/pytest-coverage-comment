@@ -15272,7 +15272,9 @@ const getCoverageReport = (options) => {
     const content = getContentFile(covFilePath);
     const coverage = getTotalCoverage(content);
     const isValid = isValidCoverageContent(content);
-
+    core.info(`content: ${coverage}`);
+    core.info(`coverage: ${coverage}`);
+    core.info(`isValid: ${isValid}`);
     if (content && !isValid) {
       core.error(
         `Error: coverage file "${covFilePath}" has bad format or wrong data`
@@ -15281,9 +15283,13 @@ const getCoverageReport = (options) => {
 
     if (content && isValid) {
       const html = toHtml(content, options);
+      core.info(`toHtml`);
       const total = getTotal(content);
+      core.info(`total`);
       const warnings = getWarnings(content);
+      core.info(`warnings`);
       const color = getCoverageColor(total ? total.cover : '0');
+      core.info(`color`);
 
       return { html, coverage, color, warnings };
     }
@@ -15916,6 +15922,7 @@ const main = async () => {
         core.info('RENDERING HTML');
         const newOptions = { ...options, commit: defaultBranch };
         const output = getCoverageReport(newOptions);
+        core.info('RENDERING HTML...setOutput');
         core.setOutput('coverageHtml', output.html);
         core.info('RENDERED HTML');
       }
