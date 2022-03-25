@@ -109,11 +109,12 @@ const getActualLines = (data) => {
 // get total line from coverage-file
 const getTotal = (data) => {
   if (!data || !data.length) {
+    core.error(`No Data: ${data}`)
     return null;
   }
 
   const lines = data.split('\n');
-  const line = lines.find((l) => l.includes('TOTAL     '));
+  const line = lines.find((l) => l.match(/TOTAL\s+/));
   return parseTotalLine(line);
 };
 
@@ -169,6 +170,7 @@ const parseOneLine = (line) => {
 // parse total line from coverage-file
 const parseTotalLine = (line) => {
   if (!line) {
+    core.error("No line passed to parseTotalLine")
     return null;
   }
 
