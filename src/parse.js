@@ -27,7 +27,7 @@ const getCoverageReport = (options) => {
     const content = getContentFile(covFilePath);
     const coverage = getTotalCoverage(content);
     const isValid = isValidCoverageContent(content);
-    core.info(`content: ${coverage}`);
+    core.info(`content: ${content}`);
     core.info(`coverage: ${coverage}`);
     core.info(`isValid: ${isValid}`);
     if (content && !isValid) {
@@ -49,7 +49,7 @@ const getCoverageReport = (options) => {
       return { html, coverage, color, warnings };
     }
   } catch (error) {
-    core.error(`Generating coverage report. ${error.message}`);
+    core.error(`Error Generating coverage report. ${error}`);
   }
 
   return { html: '', coverage: '0', color: 'red', warnings: 0 };
@@ -176,6 +176,7 @@ const parseTotalLine = (line) => {
 
   const parsedLine = line.split(/\s+/).filter((l) => l);
   if (parsedLine.length < 4) {
+    core.error(`Failed to parse line in parseTotalLine: ${parsedLine}`)
     return null;
   }
 
