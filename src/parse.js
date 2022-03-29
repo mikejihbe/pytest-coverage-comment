@@ -18,7 +18,7 @@ const isValidCoverageContent = (data) => {
   return wordsToInclude.every((w) => data.includes(w));
 };
 
-// return full html coverage report and coverage percenatge
+// return full html coverage report and coverage percentage
 const getCoverageReport = (options) => {
   const { covFile } = options;
 
