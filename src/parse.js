@@ -109,7 +109,7 @@ const getActualLines = (data) => {
 // get total line from coverage-file
 const getTotal = (data) => {
   if (!data || !data.length) {
-    core.error(`No Data: ${data}`)
+    core.error(`No Data: ${data}`);
     return null;
   }
 
@@ -170,13 +170,13 @@ const parseOneLine = (line) => {
 // parse total line from coverage-file
 const parseTotalLine = (line) => {
   if (!line) {
-    core.error("No line passed to parseTotalLine")
+    core.error('No line passed to parseTotalLine');
     return null;
   }
 
   const parsedLine = line.split(/\s+/).filter((l) => l);
   if (parsedLine.length < 4) {
-    core.error(`Failed to parse line in parseTotalLine: ${parsedLine}`)
+    core.error(`Failed to parse line in parseTotalLine: ${parsedLine}`);
     return null;
   }
 

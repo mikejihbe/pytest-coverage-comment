@@ -15272,7 +15272,7 @@ const getCoverageReport = (options) => {
     const content = getContentFile(covFilePath);
     const coverage = getTotalCoverage(content);
     const isValid = isValidCoverageContent(content);
-    core.info(`content: ${coverage}`);
+    core.info(`content: ${content}`);
     core.info(`coverage: ${coverage}`);
     core.info(`isValid: ${isValid}`);
     if (content && !isValid) {
@@ -15294,7 +15294,7 @@ const getCoverageReport = (options) => {
       return { html, coverage, color, warnings };
     }
   } catch (error) {
-    core.error(`Generating coverage report. ${error.message}`);
+    core.error(`Error Generating coverage report. ${error}`);
   }
 
   return { html: '', coverage: '0', color: 'red', warnings: 0 };
@@ -15354,11 +15354,12 @@ const getActualLines = (data) => {
 // get total line from coverage-file
 const getTotal = (data) => {
   if (!data || !data.length) {
+    core.error(`No Data: ${data}`);
     return null;
   }
 
   const lines = data.split('\n');
-  const line = lines.find((l) => l.includes('TOTAL     '));
+  const line = lines.find((l) => l.match(/TOTAL\s+/));
   return parseTotalLine(line);
 };
 
@@ -15414,11 +15415,13 @@ const parseOneLine = (line) => {
 // parse total line from coverage-file
 const parseTotalLine = (line) => {
   if (!line) {
+    core.error('No line passed to parseTotalLine');
     return null;
   }
 
   const parsedLine = line.split(/\s+/).filter((l) => l);
   if (parsedLine.length < 4) {
+    core.error(`Failed to parse line in parseTotalLine: ${parsedLine}`);
     return null;
   }
 
@@ -15909,6 +15912,8 @@ const main = async () => {
       const changedFiles = await getChangedFiles(options);
       options.changedFiles = changedFiles;
     }
+
+    core.info(`Options: ${JSON.stringify(options)}`);
 
     if (multipleFiles && multipleFiles.length) {
       finalHtml += getMultipleReport(options);
