@@ -1,6 +1,8 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
+const fs = require('fs');
 const { getCoverageReport } = require('./parse');
+const { uploadToRepo } = require('./commit');
 const {
   getSummaryReport,
   getParsedXml,
@@ -41,6 +43,12 @@ const main = async () => {
     const xmlFile = core.getInput('junitxml-path', { required: false });
     const xmlTitle = core.getInput('junitxml-title', { required: false });
     const multipleFiles = core.getMultilineInput('multiple-files', {
+      required: false,
+    });
+    const storeHTMLInRepo = core.getInput('store-in-repo', {
+      required: false,
+    });
+    const storeHTMLInRepoBranch = core.getInput('store-in-repo-branch', {
       required: false,
     });
     const { context, repository } = github;
@@ -156,6 +164,20 @@ const main = async () => {
     }
     const body = WATERMARK + finalHtml;
     const octokit = github.getOctokit(token);
+
+    if (storeHTMLInRepo) {
+      const coverageHTMLFile = '/tmp/coverage.html';
+      fs.writeFileSync(coverageHTMLFile, finalHtml);
+
+      // Write html to disk and push it to repo
+      await uploadToRepo(
+        octokit,
+        [coverageHTMLFile],
+        owner,
+        repo,
+        storeHTMLInRepoBranch
+      );
+    }
 
     const issue_number = payload.pull_request ? payload.pull_request.number : 0;
 

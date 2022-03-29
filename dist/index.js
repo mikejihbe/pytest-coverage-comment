@@ -15272,7 +15272,6 @@ const getCoverageReport = (options) => {
     const content = getContentFile(covFilePath);
     const coverage = getTotalCoverage(content);
     const isValid = isValidCoverageContent(content);
-    core.info(`content: ${content}`);
     core.info(`coverage: ${coverage}`);
     core.info(`isValid: ${isValid}`);
     if (content && !isValid) {

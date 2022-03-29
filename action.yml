@@ -66,6 +66,16 @@ inputs:
     default: 'false'
     required: false
 
+  store-in-repo:
+    description: 'When passed, will commit coverage HTML to the given repo'
+    default: ''
+    required: false
+
+  store-in-repo-branch:
+    description: 'Will commit coverage HTML to this branch in the store-in-repo. Only used when store-in-repo is passed'
+    default: 'main'
+    required: false
+
   default-branch:
     description: 'This branch name is usefull when generate "coverageHtml", it points direct links to files on this branch (instead of commit). Usually "main" or "master"'
     default: 'main'
